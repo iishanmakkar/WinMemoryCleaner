@@ -164,13 +164,99 @@ namespace WinMemoryCleaner
         private static Localization InitializeFallback()
         {
             var fallback = new Localization();
+            
+            // Use English format strings as fallback so placeholders work even if JSON fails to load
+            var englishStrings = new Dictionary<string, string>
+            {
+                { nameof(Localization.About), "about" },
+                { nameof(Localization.Add), "add" },
+                { nameof(Localization.AlwaysOnTop), "always on top" },
+                { nameof(Localization.AutoOptimization), "auto optimization" },
+                { nameof(Localization.AutoOptimizationInterval), "the interval between subsequent free memory auto optimizations is {0} minutes" },
+                { nameof(Localization.AutoUpdate), "auto update" },
+                { nameof(Localization.Background), "background" },
+                { nameof(Localization.Close), "close" },
+                { nameof(Localization.CloseAfterOptimization), "close after optimization" },
+                { nameof(Localization.CloseToTheNotificationArea), "close to the notification area" },
+                { nameof(Localization.Collapse), "collapse" },
+                { nameof(Localization.CombinedPageList), "combined page list" },
+                { nameof(Localization.CreateStartMenuShortcut), "create start menu shortcut" },
+                { nameof(Localization.DangerLevel), "danger level" },
+                { nameof(Localization.Donate), "donate" },
+                { nameof(Localization.DonationMessage), "if you find this app helpful, please consider donating. your contribution helps keep the project alive, optimized, and free for everyone." },
+                { nameof(Localization.DonationTitle), "support this project" },
+                { nameof(Localization.Error), "error" },
+                { nameof(Localization.ErrorAdminPrivilegeRequired), "this operation requires administrator privileges ({0})" },
+                { nameof(Localization.ErrorCanNotSaveLog), "cannot save the log: {0} ({1})" },
+                { nameof(Localization.ErrorMemoryAreaOptimizationNotSupported), "the memory area {0} optimization is not supported on this version of the operating system" },
+                { nameof(Localization.ErrorResetCommand), "reset failed: {0}" },
+                { nameof(Localization.EveryHour), "every {0}h" },
+                { nameof(Localization.Exit), "exit" },
+                { nameof(Localization.Expand), "expand" },
+                { nameof(Localization.Free), "free" },
+                { nameof(Localization.GarbageCollector), "garbage collector" },
+                { nameof(Localization.Help), "help" },
+                { nameof(Localization.HotkeyIsInUseByOperatingSystem), "the hotkey ({0}) is in use by the operating system" },
+                { nameof(Localization.Invalid), "invalid" },
+                { nameof(Localization.LowMemory), "low memory" },
+                { nameof(Localization.Manual), "manual" },
+                { nameof(Localization.MemoryAreas), "memory areas" },
+                { nameof(Localization.MemoryOptimized), "memory optimized" },
+                { nameof(Localization.MemoryUsage), "memory usage" },
+                { nameof(Localization.Minimize), "minimize" },
+                { nameof(Localization.ModifiedFileCache), "modified file cache" },
+                { nameof(Localization.ModifiedPageList), "modified page list" },
+                { nameof(Localization.No), "no" },
+                { nameof(Localization.OptimizationHotkey), "optimization hotkey" },
+                { nameof(Localization.Optimize), "optimize" },
+                { nameof(Localization.OptimizeOnMiddleMouseClick), "optimize on middle mouse click" },
+                { nameof(Localization.Optimizing), "optimizing" },
+                { nameof(Localization.PhysicalMemory), "physical memory" },
+                { nameof(Localization.ProcessExclusionList), "processes excluded from optimization" },
+                { nameof(Localization.Reason), "reason" },
+                { nameof(Localization.RegistryCache), "registry cache" },
+                { nameof(Localization.Remove), "remove" },
+                { nameof(Localization.Reset), "reset" },
+                { nameof(Localization.ResetCommand), "reset successful." },
+                { nameof(Localization.ResetConfirmation), "are you sure you want to reset to the default configuration?" },
+                { nameof(Localization.RunOnLowPriority), "run on low priority" },
+                { nameof(Localization.RunOnStartup), "run on startup" },
+                { nameof(Localization.Schedule), "schedule" },
+                { nameof(Localization.Seconds), "seconds" },
+                { nameof(Localization.Settings), "settings" },
+                { nameof(Localization.ShowMemoryUsage), "show memory usage" },
+                { nameof(Localization.ShowOptimizationNotifications), "show optimization notifications" },
+                { nameof(Localization.ShowVirtualMemory), "show virtual memory" },
+                { nameof(Localization.StandbyList), "standby list" },
+                { nameof(Localization.StandbyListLowPriority), "standby list (low priority)" },
+                { nameof(Localization.StartMinimized), "start minimized" },
+                { nameof(Localization.SystemFileCache), "system file cache" },
+                { nameof(Localization.Text), "text" },
+                { nameof(Localization.TrayIcon), "tray icon" },
+                { nameof(Localization.UpdatedToVersion), "updated to version {0}" },
+                { nameof(Localization.UseTransparentBackground), "use transparent background" },
+                { nameof(Localization.Used), "used" },
+                { nameof(Localization.VirtualMemory), "virtual memory" },
+                { nameof(Localization.WhenFreePhysicalMemoryIsBelow), "when free physical memory is below {0}%" },
+                { nameof(Localization.WarningLevel), "warning level" },
+                { nameof(Localization.WorkingSet), "working set" },
+                { nameof(Localization.Yes), "yes" }
+            };
+
             var props = typeof(Localization).GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach (var prop in props)
             {
                 if (prop.PropertyType == typeof(string) && prop.CanWrite)
                 {
                     var name = prop.Name;
-                    prop.SetValue(fallback, name);
+                    if (englishStrings.TryGetValue(name, out var value))
+                    {
+                        prop.SetValue(fallback, value);
+                    }
+                    else
+                    {
+                        prop.SetValue(fallback, name);
+                    }
                 }
             }
             return fallback;
