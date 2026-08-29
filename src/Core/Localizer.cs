@@ -5,20 +5,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization.Json;
+using System.Text.Json;
 
 namespace WinMemoryCleaner
 {
-    /// <summary>
-    /// Localizer
-    /// </summary>
     public static class Localizer
     {
         #region Events
 
-        /// <summary>
-        /// Occurs when [static property changed].
-        /// </summary>
         public static event PropertyChangedEventHandler StaticPropertyChanged;
 
         #endregion
@@ -27,14 +21,17 @@ namespace WinMemoryCleaner
 
         private static CultureInfo _culture;
         private static Language _language;
+        private static Localization _fallbackLocalization;
+        private static bool _isInitialized;
 
         #endregion
 
-        #region Constructors
+        #region Constructor
 
         static Localizer()
         {
-            String = new Localization();
+            InitializeFallback();
+            String = _fallbackLocalization;
 
             try
             {
@@ -46,21 +43,16 @@ namespace WinMemoryCleaner
             }
 
             Language = new Language(Culture);
+            _isInitialized = true;
         }
 
         #endregion
 
         #region Properties
 
-        /// <summary>
-        /// Gets the culture.
-        /// </summary>
-        /// <value>
-        /// The culture.
-        /// </value>
         public static CultureInfo Culture
         {
-            get { return _culture; }
+            get => _culture;
             private set
             {
                 _culture = value;
@@ -68,15 +60,9 @@ namespace WinMemoryCleaner
             }
         }
 
-        /// <summary>
-        /// Gets or sets the language.
-        /// </summary>
-        /// <value>
-        /// The language.
-        /// </value>
         public static Language Language
         {
-            get { return _language; }
+            get => _language;
             set
             {
                 if (_language != null && _language.Equals(value))
@@ -85,7 +71,7 @@ namespace WinMemoryCleaner
                 try
                 {
                     if (value == null)
-                        throw new ArgumentNullException("value");
+                        throw new ArgumentNullException(nameof(value));
 
                     Load(value);
 
@@ -96,48 +82,62 @@ namespace WinMemoryCleaner
                 {
                     Settings.Language = Constants.Windows.Locale.Name.English;
                     Settings.Save();
-
                     throw;
                 }
 
                 _language = value;
-
                 RaiseStaticPropertyChanged(string.Empty);
 
-                App.ReleaseMemory();
+                if (_isInitialized)
+                    App.ReleaseMemory();
             }
         }
 
-        /// <summary>
-        /// Gets the languages.
-        /// </summary>
-        /// <value>
-        /// The languages.
-        /// </value>
         public static List<Language> Languages
         {
             get
             {
                 try
                 {
-                    var resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames()
-                        .Where(file => file.StartsWith(Constants.App.LocalizationResourcePath, StringComparison.OrdinalIgnoreCase) && file.EndsWith(Constants.App.EmbeddedResourcePathExtension, StringComparison.OrdinalIgnoreCase))
-                        .Select(file => file.Replace(Constants.App.LocalizationResourcePath, string.Empty).Replace(Constants.App.EmbeddedResourcePathExtension, string.Empty))
+                    var assembly = Assembly.GetExecutingAssembly();
+                    var resourcePrefix = Constants.App.LocalizationResourcePath;
+                    var resourceSuffix = Constants.App.EmbeddedResourcePathExtension;
+
+                    var resourceNames = assembly.GetManifestResourceNames()
+                        .Where(file => file.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase) &&
+                                     file.EndsWith(resourceSuffix, StringComparison.OrdinalIgnoreCase))
+                        .Select(file => file[resourcePrefix.Length..^resourceSuffix.Length])
                         .OrderBy(file => file)
                         .ToList();
 
                     try
                     {
-                        var localResources = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, string.Format(Culture, "*{0}", Constants.App.EmbeddedResourcePathExtension), SearchOption.TopDirectoryOnly)
-                            .Select(Path.GetFileNameWithoutExtension)
-                            .ToList();
+                        var searchDirectories = new[]
+                        {
+                            AppDomain.CurrentDomain.BaseDirectory,
+                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Localization"),
+                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Themes")
+                        };
+
+                        var localResources = new List<string>();
+                        foreach (var dir in searchDirectories)
+                        {
+                            try
+                            {
+                                var files = Directory.GetFiles(dir,
+                                    $"*{Constants.App.EmbeddedResourcePathExtension}", SearchOption.TopDirectoryOnly);
+                                localResources.AddRange(files.Select(Path.GetFileNameWithoutExtension));
+                            }
+                            catch
+                            {
+                            }
+                        }
 
                         if (localResources.Any())
-                            resourceNames.AddRange(localResources);
+                            resourceNames.AddRange(localResources.Distinct());
                     }
                     catch
                     {
-                        // ignored
                     }
 
                     return CultureInfo.GetCultures(CultureTypes.AllCultures)
@@ -149,54 +149,116 @@ namespace WinMemoryCleaner
                 catch (Exception e)
                 {
                     Logger.Error(e);
-
                     return new List<Language> { new Language(new CultureInfo(Constants.Windows.Locale.Name.English)) };
                 }
             }
         }
 
-        /// <summary>
-        /// Gets the string
-        /// </summary>
         public static Localization String { get; private set; }
 
         #endregion
 
         #region Methods
 
+        private static void InitializeFallback()
+        {
+            _fallbackLocalization = new Localization();
+            var props = typeof(Localization).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var prop in props)
+            {
+                if (prop.PropertyType == typeof(string) && prop.CanWrite)
+                {
+                    var name = prop.Name;
+                    prop.SetValue(_fallbackLocalization, name);
+                }
+            }
+        }
+
         private static void Load(Language language)
         {
-            Localization localization;
+            Localization localization = null;
+            var resourceName = $"{Constants.App.LocalizationResourcePath}{language.EnglishName}{Constants.App.EmbeddedResourcePathExtension}";
 
-            var localResource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, string.Format(Culture, "{0}{1}", language.EnglishName, Constants.App.EmbeddedResourcePathExtension));
-            var resource = string.Format(Culture, "{0}{1}{2}", Constants.App.LocalizationResourcePath, language.EnglishName, Constants.App.EmbeddedResourcePathExtension);
-
-            using (var stream = File.Exists(localResource) ? File.OpenRead(localResource) : Assembly.GetExecutingAssembly().GetManifestResourceStream(resource))
+            var options = new JsonSerializerOptions
             {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true
+            };
+
+            var assembliesToTry = new[] { Assembly.GetExecutingAssembly(), Assembly.GetEntryAssembly() }.Distinct();
+
+            foreach (var assembly in assembliesToTry)
+            {
+                if (assembly == null) continue;
+
                 try
                 {
-                    if (stream == null)
-                        throw new NullReferenceException();
-
-                    var serializer = new DataContractJsonSerializer(typeof(Localization));
-
-                    localization = (Localization)serializer.ReadObject(stream);
+                    using var stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream != null)
+                    {
+                        localization = JsonSerializer.Deserialize<Localization>(stream, options);
+                        if (localization != null)
+                        {
+                            break;
+                        }
+                    }
                 }
-                catch
+                catch (Exception e)
                 {
-                    throw new Exception(string.Format(Culture, "The {0} language file is missing or invalid.", language.EnglishName));
+                    Logger.Debug($"Failed to load embedded resource {resourceName} from {assembly.FullName}: {e.Message}");
                 }
+            }
+
+            if (localization == null)
+            {
+                var searchDirectories = new[]
+                {
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Localization"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Themes")
+                };
+
+                foreach (var dir in searchDirectories)
+                {
+                    var localResource = Path.Combine(dir, $"{language.EnglishName}{Constants.App.EmbeddedResourcePathExtension}");
+                    try
+                    {
+                        if (File.Exists(localResource))
+                        {
+                            using var stream = File.OpenRead(localResource);
+                            localization = JsonSerializer.Deserialize<Localization>(stream, options);
+                            if (localization != null)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Debug($"Failed to load local file {localResource}: {e.Message}");
+                    }
+                }
+            }
+
+            if (localization == null)
+            {
+                Logger.Warning($"Language file for {language.EnglishName} not found or invalid, using fallback");
+                localization = _fallbackLocalization;
             }
 
             var nullOrEmptyStrings = localization
                 .GetType()
                 .GetProperties()
-                .Where(pi => pi.PropertyType == typeof(string) && string.IsNullOrWhiteSpace((string)pi.GetValue(localization, null)))
+                .Where(pi => pi.PropertyType == typeof(string) && string.IsNullOrWhiteSpace((string)pi.GetValue(localization)))
                 .Select(pi => pi.Name)
                 .ToList();
 
             if (nullOrEmptyStrings.Any())
-                throw new Exception(string.Format(Culture, "The {0} language file is invalid. Missing Values: {1}", language.EnglishName, string.Join(", ", nullOrEmptyStrings)));
+            {
+                Logger.Warning($"Language file for {language.EnglishName} has missing values: {string.Join(", ", nullOrEmptyStrings)}, using fallback");
+                localization = _fallbackLocalization;
+            }
 
             Culture = new CultureInfo(language.Name);
             String = localization;
@@ -204,8 +266,7 @@ namespace WinMemoryCleaner
 
         private static void RaiseStaticPropertyChanged(string propertyName = null)
         {
-            if (StaticPropertyChanged != null)
-                StaticPropertyChanged.Invoke(null, new PropertyChangedEventArgs(propertyName));
+            StaticPropertyChanged?.Invoke(null, new PropertyChangedEventArgs(propertyName));
         }
 
         #endregion
