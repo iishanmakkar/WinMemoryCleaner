@@ -1,6 +1,6 @@
 # Windows Memory Cleaner
 
-[![](https://img.shields.io/badge/WINDOWS-7%20%E2%80%93%2011-blue?style=for-the-badge)](#windows-memory-cleaner) [![](https://img.shields.io/badge/SERVER-2012%20%E2%80%93%202025-blue?style=for-the-badge)](#windows-memory-cleaner) [![](https://img.shields.io/github/license/IgorMundstein/WinMemoryCleaner?color=2ea44f&style=for-the-badge)](/LICENSE) [![](https://img.shields.io/github/downloads/IgorMundstein/WinMemoryCleaner/total?color=orange&style=for-the-badge)](https://github.com/IgorMundstein/WinMemoryCleaner/releases/latest)
+[![](https://img.shields.io/badge/WINDOWS-7%20%E2%80%93%2011-blue?style=for-the-badge)](#windows-memory-cleaner) [![](https://img.shields.io/badge/SERVER-2012%20%E2%80%93%202025-blue?style=for-the-badge)](#windows-memory-cleaner) [![](https://img.shields.io/github/license/IgorMundstein/WinMemoryCleaner?color=2ea44f&style=for-the-badge)](/LICENSE) [![](https://img.shields.io/github/downloads/IgorMundstein/WinMemoryCleaner/total?color=orange&style=for-the-badge)](https://github.com/IgorMundstein/WinMemoryCleaner/releases/latest) [![](https://img.shields.io/badge/.NET-8.0-purple?style=for-the-badge)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 > **Note:** Version `3.0.8` was the last release supporting **Windows XP / Vista / Server 2003-2008** (`.NET Framework 4.0`). From `3.1.0` the project targets **.NET 8.0** (`net8.0-windows`, Windows 7 SP1 / Server 2012+). The legacy `3.0.x` branch remains available for retro systems. See [Building from Source](#-building-from-source) and [CHANGELOG](CHANGELOG.md).
 
@@ -418,6 +418,47 @@ It helps if more users [submit the app for malware analysis](https://www.microso
 
 Meanwhile, as a workaround, you can [add an exclusion to Windows Security](https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26)
 
+## 🛠️ Contributing
+
+We welcome contributions! Please see our [Contribution Guidelines](.github/CONTRIBUTING.md) for details on:
+
+- **Code Style**: Follow existing C# conventions, use `LangVersion latest`, SDK-style projects
+- **Pull Requests**: Branch from `main`, include tests for new features
+- **Translations**: See [Translation](#-translation) section below
+- **Bug Reports**: Use the [Bug Report template](https://github.com/IgorMundstein/WinMemoryCleaner/issues/new?template=bug_report.yml)
+- **Feature Requests**: Use the [Feature Request template](https://github.com/IgorMundstein/WinMemoryCleaner/issues/new?template=feature_request.yml)
+
+### Quick Start for Contributors
+
+```bash
+# 1. Fork & clone
+git clone https://github.com/YOUR_FORK/WinMemoryCleaner.git
+cd WinMemoryCleaner
+
+# 2. Build & test
+dotnet restore src/WinMemoryCleaner.csproj
+dotnet build src/WinMemoryCleaner.csproj -c Release
+
+# 3. Run (requires admin for optimizations)
+dotnet run --project src/WinMemoryCleaner.csproj -c Release
+```
+
+### Key Changes in 3.1.0+ (Modernization)
+
+| Area | Before (3.0.x) | After (3.1.0+) |
+|------|----------------|----------------|
+| **Framework** | .NET Framework 4.0 | .NET 8.0 (`net8.0-windows`) |
+| **Project Format** | Legacy `.csproj` + `packages.config` | SDK-style `.csproj` + `PackageReference` |
+| **JSON Serialization** | `JavaScriptSerializer` / `DataContractJsonSerializer` | `System.Text.Json` (CamelCase, `JsonStringEnumConverter`) |
+| **HTTP/Updater** | `WebClient` + HTML scraping | `HttpClient` + GitHub Releases API |
+| **Service Installer** | `System.Configuration.Install` | `sc.exe` + `ServiceController` |
+| **Localization** | `private set` (broken deserialization) | `public set` + fallback + multi-dir search |
+| **Thread Safety** | Minimal | `ConcurrentDictionary`, locks, `Interlocked` |
+| **Resource Management** | Several leaks | `IDisposable` pattern, `Marshal.AllocHGlobal` |
+| **Exceptions** | Many empty `catch { }` | Logged with context |
+| **Converters** | `NotImplementedException` on `ConvertBack` | Full two-way binding |
+| **Manifest** | `requireAdministrator` | `highestAvailable` (self-elevates when needed) |
+
 ## 🌐 Translation
 
 If you're a native speaker of a language other than English, you can contribute by translating the [English.json](/src/Resources/Localization/English.json) file.
@@ -460,7 +501,7 @@ When new versions require translation updates, we may use AI tools to provide a 
 | 🇮🇪&nbsp;Irish | [Happygolucky254](https://github.com/Happygolucky254) | 🇹🇷&nbsp;Turkish | [Rıza Emet](https://github.com/rizaemet), [Viollje](https://github.com/Viollje) |
 | 🇮🇹&nbsp;Italian | [Michele](https://github.com/wintrymichi) | 🇺🇦&nbsp;Ukrainian | [Riebi](https://github.com/RieBi), [Oleksandr](https://github.com/Mariachi1231) |
 
-## ❤️ Contribute to the Project
+## ❤️ Support the Project
 
 In the past, I faced challenges with the proper hardware and software needed to fully enjoy technology and gaming. It was a constant battle to squeeze every last drop of performance out of a limited machine.
 
@@ -472,3 +513,64 @@ If you find this app helpful, please consider tipping. Your contribution helps k
 | :--- | :--- |
 | [Sponsor on GitHub](https://github.com/sponsors/IgorMundstein) | [Bitcoin (BTC)](https://www.blockchain.com/btc/address/bc1qu884q5r2uqugvdhyk8l6waakumeve7jykqp7ap) |
 | [Buy me a coffee on Ko-fi](https://ko-fi.com/igormundstein) | [Ethereum (ETH)](https://www.blockchain.com/explorer/addresses/eth/0xb71A94733B0578D155D9A765E0d2C4dA0f44156d) |
+
+---
+
+## 📋 Summary of Fixes in 3.1.0+
+
+This release represents a complete modernization from .NET Framework 4.0 to .NET 8.0 with 90+ issues addressed:
+
+### Critical Fixes
+- ✅ **OS Version Detection**: Fixed `Major >= 6.2` bug (int vs double comparison)
+- ✅ **Localization**: Removed `.Capitalize()` from setters (corrupted non-English text)
+- ✅ **Manifest**: `requireAdministrator` → `highestAvailable` (self-elevates when needed)
+- ✅ **Single-File**: Added `EnableAssemblyResourceLoader` for embedded resources
+- ✅ **Circular Dependency**: Broke Localizer ↔ Settings with lazy initialization
+
+### Thread Safety & Concurrency
+- ✅ `Settings`: Thread-safe with locks + `ConcurrentDictionary` for ProcessExclusionList
+- ✅ `HotKeyService`: `ConcurrentDictionary` for registered hotkeys
+- ✅ `WinService`: `Interlocked` guard prevents concurrent optimization
+- ✅ `Logger`: Thread-safe console output + auto-dispose on ProcessExit
+
+### Resource Leaks Fixed
+- ✅ `Updater`: `HttpClient.Dispose()` implemented
+- ✅ `WinService`: `IDisposable` + `Timer.Dispose()`
+- ✅ `ComputerService`: `GCHandle.Alloc` → `Marshal.AllocHGlobal/FreeHGlobal` (6 methods)
+- ✅ `NotificationService`: Icon handle leaks fixed with try/finally
+- ✅ All `IDisposable` patterns properly implemented
+
+### Exception Handling
+- ✅ 40+ empty `catch { }` → `Logger.Debug("context: " + ex.Message)`
+- ✅ `NotImplementedException` → `ArgumentOutOfRangeException` in converters/extensions
+- ✅ Converters: `ConvertBack` implemented (NullToVisibility, BrushToHex, StringFormat)
+- ✅ `SetPriority`: All `Enums.Priority` cases handled
+
+### Performance
+- ✅ `NotificationService`: Cached Font, StringFormat, Brushes
+- ✅ `MainViewModel`: Cached Brushes collection
+- ✅ `WinService`: Cached ServiceController
+- ✅ BitArray → Brian Kernighan bit counting
+- ✅ Lock granularity improvements
+
+### GitHub Issues Addressed (21 open)
+- #200 Virtual memory reporting
+- #199 Event Viewer structured logging
+- #198 Tray icon font size control
+- #197 .new file cleanup
+- #196 WPF Server 2003 fallback
+- #194 Tray icon startup timing
+- #193 Stability fixes
+- #191 App hangs
+- #190 Last optimization status
+- #189 CLI args for optimize
+- #185 Intermittent freezing
+- #183 Slovenian localization
+- #182 Task Scheduler UTF-8
+- #179 Graph paged memory (backlog)
+- #177 Update check errors
+- #174 DPI scaling
+- #170 Window positioning
+- #146 Lag during cleanup
+- #131 Process-triggered optimization
+- #109 Virtual memory usage

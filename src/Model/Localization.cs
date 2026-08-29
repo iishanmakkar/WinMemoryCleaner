@@ -42,7 +42,7 @@ namespace WinMemoryCleaner
         public string About
         {
             get { return _about; }
-            set { _about = value.Capitalize(); }
+            set { _about = value; }
         }
 
         [DataMember]

@@ -49,6 +49,8 @@ namespace WinMemoryCleaner
                     Event(e.GetMessage(), EventLogEntryType.Error);
                 }
             }
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => Dispose();
         }
 
         /// <summary>
@@ -187,7 +189,7 @@ namespace WinMemoryCleaner
             Log(new Log(Enums.Log.Levels.Error, message, null, method));
         }
 
-        /// <summary>
+/// <summary>
         /// Windows Event
         /// </summary>
         private static void Event(string message, EventLogEntryType type = EventLogEntryType.Information)
@@ -196,9 +198,9 @@ namespace WinMemoryCleaner
             {
                 EventLog.WriteEntry(Constants.App.Title, message, type);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignored
+                Logger.Debug("EventLog.WriteEntry failed: " + ex.Message);
             }
         }
 
@@ -218,9 +220,9 @@ namespace WinMemoryCleaner
                             method = string.Format(Localizer.Culture, "{0}.{1}", methodBase.DeclaringType.Name, methodBase.Name);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignored
+                    Logger.Debug("Stack trace extraction failed: " + ex.Message);
                 }
             }
 
@@ -257,9 +259,9 @@ namespace WinMemoryCleaner
                     {
                         Console.WriteLine(message);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // ignored
+                        Logger.Debug("Console.WriteLine failed: " + ex.Message);
                     }
                 }
 

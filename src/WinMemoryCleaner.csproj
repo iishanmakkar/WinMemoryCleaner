@@ -21,6 +21,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);CA1416;SYSLIB0014;SYSLIB0051;IL3000;WPF0001;CS0618;CS1591</NoWarn>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableAssemblyResourceLoader>true</EnableAssemblyResourceLoader>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

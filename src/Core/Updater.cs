@@ -43,7 +43,7 @@ namespace WinMemoryCleaner
 
                 // Download the new version
                 var exe = Path.GetFileName(App.Path);
-                var temp = Path.Combine(Path.GetTempPath(), exe);
+                var temp = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.exe");
 
                 Helper.DeleteFile(temp);
 
@@ -51,21 +51,32 @@ namespace WinMemoryCleaner
                 await File.WriteAllBytesAsync(temp, fileBytes);
 
                 // Verify the downloaded file
-                if (File.Exists(temp) && AssemblyName.GetAssemblyName(temp).Version.Equals(newestVersion))
+                if (File.Exists(temp))
                 {
-                    _process = new ProcessStartInfo
+                    try
                     {
-                        Arguments = string.Format(CultureInfo.InvariantCulture, @"/c taskkill /f /im ""{0}"" & move /y ""{1}"" ""{2}"" & start """" ""{2}"" /{3} {4}", exe, temp, App.Path, newestVersion, string.Join(" ", args)),
-                        CreateNoWindow = true,
-                        FileName = "cmd",
-                        RedirectStandardError = false,
-                        RedirectStandardInput = false,
-                        RedirectStandardOutput = false,
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden
-                    };
+                        var downloadedVersion = AssemblyName.GetAssemblyName(temp).Version;
+                        if (downloadedVersion != null && downloadedVersion.Equals(newestVersion))
+                        {
+                            _process = new ProcessStartInfo
+                            {
+                                Arguments = string.Format(CultureInfo.InvariantCulture, @"/c taskkill /f /im ""{0}"" & move /y ""{1}"" ""{2}"" & start """" ""{2}"" /{3} {4}", exe, temp, App.Path, newestVersion, string.Join(" ", args)),
+                                CreateNoWindow = true,
+                                FileName = "cmd",
+                                RedirectStandardError = false,
+                                RedirectStandardInput = false,
+                                RedirectStandardOutput = false,
+                                UseShellExecute = false,
+                                WindowStyle = ProcessWindowStyle.Hidden
+                            };
 
-                    App.Shutdown();
+                            App.Shutdown();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Failed to verify downloaded update: " + ex.GetMessage());
+                    }
                 }
             }
             catch (Exception ex)
@@ -91,6 +102,11 @@ namespace WinMemoryCleaner
             }
 
             return null;
+        }
+
+        public static void Dispose()
+        {
+            _httpClient?.Dispose();
         }
     }
 }

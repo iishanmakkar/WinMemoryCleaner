@@ -81,7 +81,7 @@ namespace WinMemoryCleaner
 
                 foreach (var process in processes)
                 {
-                    try { process.Kill(); } catch { /* ignored */ }
+                    try { process.Kill(); } catch (Exception ex) { Logger.Debug("Failed to kill process " + process.ProcessName + ": " + ex.Message); }
                 }
 
                 // Delete service using sc.exe
@@ -91,7 +91,7 @@ namespace WinMemoryCleaner
                 processes = Process.GetProcessesByName(Constants.App.Name);
                 foreach (var process in processes)
                 {
-                    try { process.Kill(); } catch { /* ignored */ }
+                    try { process.Kill(); } catch (Exception ex) { Logger.Debug("Failed to kill process " + process.ProcessName + ": " + ex.Message); }
                 }
 
                 Logger.Information("Service uninstalled: " + ServiceName);

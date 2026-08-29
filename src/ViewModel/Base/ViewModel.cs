@@ -42,7 +42,7 @@ namespace WinMemoryCleaner
             set
             {
                 try { NotificationService.Loading(value); }
-                catch { /* ignored */ }
+                catch (Exception ex) { Logger.Debug("Failed to set loading state: " + ex.Message); }
 
                 _isBusy = value;
                 OnPropertyChanged();

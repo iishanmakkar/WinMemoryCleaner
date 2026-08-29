@@ -21,8 +21,10 @@ namespace WinMemoryCleaner
 
         private static CultureInfo _culture;
         private static Language _language;
-        private static Localization _fallbackLocalization;
         private static bool _isInitialized;
+        private static readonly Lazy<Localization> _fallbackLocalizationLazy = new(InitializeFallback);
+        private static List<Language> _cachedLanguages;
+        private static readonly object _languagesLock = new();
 
         #endregion
 
@@ -30,19 +32,7 @@ namespace WinMemoryCleaner
 
         static Localizer()
         {
-            InitializeFallback();
-            String = _fallbackLocalization;
-
-            try
-            {
-                Culture = new CultureInfo(Settings.Language);
-            }
-            catch
-            {
-                Culture = new CultureInfo(Constants.Windows.Locale.Name.English);
-            }
-
-            Language = new Language(Culture);
+            String = _fallbackLocalizationLazy.Value;
             _isInitialized = true;
         }
 
@@ -97,59 +87,70 @@ namespace WinMemoryCleaner
         {
             get
             {
-                try
-                {
-                    var assembly = Assembly.GetExecutingAssembly();
-                    var resourcePrefix = Constants.App.LocalizationResourcePath;
-                    var resourceSuffix = Constants.App.EmbeddedResourcePathExtension;
+                if (_cachedLanguages != null)
+                    return _cachedLanguages;
 
-                    var resourceNames = assembly.GetManifestResourceNames()
-                        .Where(file => file.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase) &&
-                                     file.EndsWith(resourceSuffix, StringComparison.OrdinalIgnoreCase))
-                        .Select(file => file[resourcePrefix.Length..^resourceSuffix.Length])
-                        .OrderBy(file => file)
-                        .ToList();
+                lock (_languagesLock)
+                {
+                    if (_cachedLanguages != null)
+                        return _cachedLanguages;
 
                     try
                     {
-                        var searchDirectories = new[]
-                        {
-                            AppDomain.CurrentDomain.BaseDirectory,
-                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Localization"),
-                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Themes")
-                        };
+                        var assembly = Assembly.GetExecutingAssembly();
+                        var resourcePrefix = Constants.App.LocalizationResourcePath;
+                        var resourceSuffix = Constants.App.EmbeddedResourcePathExtension;
 
-                        var localResources = new List<string>();
-                        foreach (var dir in searchDirectories)
+                        var resourceNames = assembly.GetManifestResourceNames()
+                            .Where(file => file.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase) &&
+                                         file.EndsWith(resourceSuffix, StringComparison.OrdinalIgnoreCase))
+                            .Select(file => file[resourcePrefix.Length..^resourceSuffix.Length])
+                            .OrderBy(file => file)
+                            .ToList();
+
+                        try
                         {
-                            try
+                            var searchDirectories = new[]
                             {
-                                var files = Directory.GetFiles(dir,
-                                    $"*{Constants.App.EmbeddedResourcePathExtension}", SearchOption.TopDirectoryOnly);
-                                localResources.AddRange(files.Select(Path.GetFileNameWithoutExtension));
-                            }
-                            catch
+                                AppDomain.CurrentDomain.BaseDirectory,
+                                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Localization"),
+                                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Themes")
+                            };
+
+                            var localResources = new List<string>();
+                            foreach (var dir in searchDirectories)
                             {
+                                try
+                                {
+                                    var files = Directory.GetFiles(dir,
+                                        $"*{Constants.App.EmbeddedResourcePathExtension}", SearchOption.TopDirectoryOnly);
+                                    localResources.AddRange(files.Select(Path.GetFileNameWithoutExtension));
+                                }
+                                catch
+                                {
+                                }
                             }
+
+                            if (localResources.Any())
+                                resourceNames.AddRange(localResources.Distinct());
+                        }
+                        catch
+                        {
                         }
 
-                        if (localResources.Any())
-                            resourceNames.AddRange(localResources.Distinct());
-                    }
-                    catch
-                    {
-                    }
+                        _cachedLanguages = CultureInfo.GetCultures(CultureTypes.AllCultures)
+                            .Where(culture => resourceNames.Contains(culture.EnglishName, StringComparer.OrdinalIgnoreCase))
+                            .OrderBy(culture => culture.EnglishName, StringComparer.InvariantCultureIgnoreCase)
+                            .Select(culture => new Language(culture))
+                            .ToList();
 
-                    return CultureInfo.GetCultures(CultureTypes.AllCultures)
-                        .Where(culture => resourceNames.Contains(culture.EnglishName, StringComparer.OrdinalIgnoreCase))
-                        .OrderBy(culture => culture.EnglishName, StringComparer.InvariantCultureIgnoreCase)
-                        .Select(culture => new Language(culture))
-                        .ToList();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e);
-                    return new List<Language> { new Language(new CultureInfo(Constants.Windows.Locale.Name.English)) };
+                        return _cachedLanguages;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e);
+                        return new List<Language> { new Language(new CultureInfo(Constants.Windows.Locale.Name.English)) };
+                    }
                 }
             }
         }
@@ -160,18 +161,19 @@ namespace WinMemoryCleaner
 
         #region Methods
 
-        private static void InitializeFallback()
+        private static Localization InitializeFallback()
         {
-            _fallbackLocalization = new Localization();
+            var fallback = new Localization();
             var props = typeof(Localization).GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach (var prop in props)
             {
                 if (prop.PropertyType == typeof(string) && prop.CanWrite)
                 {
                     var name = prop.Name;
-                    prop.SetValue(_fallbackLocalization, name);
+                    prop.SetValue(fallback, name);
                 }
             }
+            return fallback;
         }
 
         private static void Load(Language language)
@@ -244,7 +246,7 @@ namespace WinMemoryCleaner
             if (localization == null)
             {
                 Logger.Warning($"Language file for {language.EnglishName} not found or invalid, using fallback");
-                localization = _fallbackLocalization;
+                localization = _fallbackLocalizationLazy.Value;
             }
 
             var nullOrEmptyStrings = localization
@@ -257,7 +259,7 @@ namespace WinMemoryCleaner
             if (nullOrEmptyStrings.Any())
             {
                 Logger.Warning($"Language file for {language.EnglishName} has missing values: {string.Join(", ", nullOrEmptyStrings)}, using fallback");
-                localization = _fallbackLocalization;
+                localization = _fallbackLocalizationLazy.Value;
             }
 
             Culture = new CultureInfo(language.Name);
