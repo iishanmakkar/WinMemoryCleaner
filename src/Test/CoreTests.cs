@@ -1,11 +1,11 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.ComponentModel;
 using System.IO;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     
     public static class CoreTests
@@ -1353,3 +1353,4 @@ namespace WinMemoryCleaner.Test
 }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+

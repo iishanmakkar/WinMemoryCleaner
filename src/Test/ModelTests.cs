@@ -1,9 +1,9 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     /// <summary>
     /// Unit tests for Model classes
@@ -569,3 +569,4 @@ namespace WinMemoryCleaner.Test
 }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+

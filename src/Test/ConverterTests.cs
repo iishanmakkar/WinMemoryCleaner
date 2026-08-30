@@ -1,11 +1,11 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.Globalization;
 using System.Windows.Media;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     /// <summary>
     /// Unit tests for Converter classes
@@ -341,3 +341,4 @@ namespace WinMemoryCleaner.Test
 }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+

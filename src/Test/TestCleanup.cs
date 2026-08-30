@@ -1,8 +1,8 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     /// <summary>
     /// Cleanup that resets settings to defaults after all other tests complete.
@@ -20,3 +20,4 @@ namespace WinMemoryCleaner.Test
 }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+

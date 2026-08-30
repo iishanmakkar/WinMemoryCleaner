@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Windows.Input;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     /// <summary>
     /// Integration tests based on GitHub issues and real-world usage scenarios
@@ -672,3 +672,4 @@ namespace WinMemoryCleaner.Test
 }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+

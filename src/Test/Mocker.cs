@@ -1,7 +1,7 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows.Input;
 
-namespace WinMemoryCleaner.Test
+namespace WinMemoryCleaner.Tests
 {
     /// <summary>
     /// Mocker - Helper class for creating test data and mock objects
@@ -262,3 +262,4 @@ namespace WinMemoryCleaner.Test
         #endregion
     }
 }
+
