@@ -55,7 +55,7 @@ jobs:
       - name: Restore dependencies
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
         shell: pwsh
-        run: dotnet restore src/WinMemoryCleaner.sln
+        run: dotnet restore src/WinMemoryCleaner.sln --no-locked-mode
 
       - name: Build solution
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
@@ -65,21 +65,22 @@ jobs:
       - name: Run Tests
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
         shell: pwsh
-        run: dotnet test src/WinMemoryCleaner.sln --configuration Release --no-build --logger "trx;LogFileName=TestResults.trx"
+        run: |
+          dotnet test src/WinMemoryCleaner.sln --configuration Release --no-build --logger "trx;LogFileName=TestResults.trx" --results-directory TestResults
 
       - name: Upload test results
         if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ github.run_number }}
-          path: '**/TestResults.trx'
+          path: '**/TestResults/*.trx'
           retention-days: 30
 
       - name: Publish test results
         if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true')
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
         with:
-          files: '**/TestResults.trx'
+          files: '**/TestResults/*.trx'
           check_name: Unit Test Results
 
       - name: Get App Version
