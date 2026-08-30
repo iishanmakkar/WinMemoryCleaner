@@ -159,10 +159,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Download build artifact for testing
+      - name: Download self-contained build artifact for testing
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build.outputs.test_artifact_name }}
+          name: winmemorycleaner-${{ needs.build.outputs.app_version }}-selfcontained
 
       - name: Run UI Test
         shell: pwsh
