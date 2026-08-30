@@ -102,6 +102,11 @@ jobs:
             /p:IncludeAllContentForSelfExtract=true `
             --output publish/self-contained
 
+      - name: Publish framework-dependent output
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
+        shell: pwsh
+        run: dotnet publish src/WinMemoryCleaner.csproj --configuration Release --runtime win-x64 --self-contained false --output src/bin/Release/net8.0-windows/win-x64/publish/
+
       - name: Upload self-contained EXE as artifact
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
         id: upload-unsigned
@@ -109,14 +114,6 @@ jobs:
         with:
           name: winmemorycleaner-${{ steps.version.outputs.app_version }}-selfcontained
           path: publish/self-contained/WinMemoryCleaner.exe
-          if-no-files-found: error
-
-      - name: Upload framework-dependent build artifact
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: winmemorycleaner-${{ steps.version.outputs.app_version }}-framework-dependent
-          path: src/bin/Release/net8.0-windows/win-x64/publish/
           if-no-files-found: error
 
       - name: Submit to SignPath (Develop CI Signing)
