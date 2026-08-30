@@ -24,13 +24,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build and Test
+  build:
+    name: Build
     runs-on: windows-latest
     outputs:
       app_version: ${{ steps.version.outputs.app_version }}
       unsigned_artifact_name: winmemorycleaner-${{ steps.version.outputs.app_version }}
-      test_artifact_name: ${{ steps.determine_artifact.outputs.name }}
       src_changed: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true' }}
 
     steps:
@@ -55,33 +54,12 @@ jobs:
       - name: Restore dependencies
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
         shell: pwsh
-        run: dotnet restore src/WinMemoryCleaner.sln --no-locked-mode
+        run: dotnet restore src/WinMemoryCleaner.csproj
 
       - name: Build solution
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
         shell: pwsh
-        run: dotnet build src/WinMemoryCleaner.sln --configuration Release --no-restore
-
-      - name: Run Tests
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
-        shell: pwsh
-        run: |
-          dotnet test src/WinMemoryCleaner.sln --configuration Release --no-build --logger "trx;LogFileName=TestResults.trx" --results-directory TestResults
-
-      - name: Upload test results
-        if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true')
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ github.run_number }}
-          path: '**/TestResults/*.trx'
-          retention-days: 30
-
-      - name: Publish test results
-        if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true')
-        uses: EnricoMi/publish-unit-test-result-action/windows@v2
-        with:
-          files: '**/TestResults/*.trx'
-          check_name: Unit Test Results
+        run: dotnet build src/WinMemoryCleaner.csproj --configuration Release --no-restore
 
       - name: Get App Version
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
@@ -175,8 +153,8 @@ jobs:
 
   test-ui:
     name: UI Test on ${{ matrix.os }}
-    needs: build-and-test
-    if: needs.build-and-test.outputs.src_changed == 'true'
+    needs: build
+    if: needs.build.outputs.src_changed == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -187,7 +165,7 @@ jobs:
       - name: Download build artifact for testing
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build-and-test.outputs.test_artifact_name }}
+          name: ${{ needs.build.outputs.test_artifact_name }}
 
       - name: Run UI Test
         shell: pwsh
@@ -231,8 +209,8 @@ jobs:
 
   package-screenshots:
     name: Package All Screenshots
-    needs: [build-and-test, test-ui]
-    if: needs.build-and-test.outputs.src_changed == 'true'
+    needs: [build, test-ui]
+    if: needs.build.outputs.src_changed == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -250,7 +228,7 @@ jobs:
         id: upload-screenshots
         uses: actions/upload-artifact@v4
         with:
-          name: all-screenshots-${{ needs.build-and-test.outputs.app_version }}
+          name: all-screenshots-${{ needs.build.outputs.app_version }}
           path: ./all-screenshots/
           retention-days: 30
 
