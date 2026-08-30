@@ -50,6 +50,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
           cache: true
+          locked-mode: false
 
       - name: Restore dependencies
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || steps.check_files.outputs.any_changed == 'true'
